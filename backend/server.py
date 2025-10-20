@@ -865,7 +865,9 @@ async def seed_initial_data():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    scheduler.shutdown()
+    if scheduler and scheduler.running:
+        scheduler.shutdown()
+        logging.info("Priority escalation scheduler shut down")
     client.close()
 
 # Include router
