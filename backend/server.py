@@ -819,8 +819,9 @@ def run_escalation_task():
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(run_escalation_task, 'interval', hours=1)
+scheduler.add_job(run_escalation_task, 'interval', hours=1, id='priority_escalation')
 scheduler.start()
+logging.info("Priority escalation scheduler started successfully")
 
 # ============= SEED DATA ON STARTUP =============
 
