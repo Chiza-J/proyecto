@@ -817,17 +817,23 @@ def run_escalation_task():
     loop.run_until_complete(escalate_ticket_priorities())
     loop.close()
 
-# Initialize scheduler
-scheduler = BackgroundScheduler()
-scheduler.add_job(run_escalation_task, 'interval', hours=1, id='priority_escalation')
-scheduler.start()
-logging.info("Priority escalation scheduler started successfully")
+# Initialize scheduler (will be started in startup event)
+scheduler = None
 
 # ============= SEED DATA ON STARTUP =============
 
 @app.on_event("startup")
 async def seed_initial_data():
     """Seed initial categories and priorities"""
+    global scheduler
+    
+    # Initialize and start scheduler
+    if scheduler is None or not scheduler.running:
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(run_escalation_task, 'interval', hours=1, id='priority_escalation')
+        scheduler.start()
+        logging.info("Priority escalation scheduler started successfully")
+    
     # Check if categories exist
     cat_count = await db.categories.count_documents({})
     if cat_count == 0:
@@ -854,7 +860,8 @@ async def seed_initial_data():
         logging.info("Initial departments seeded")
     
     # Log scheduler status
-    logging.info(f"Background scheduler status: running={scheduler.running}, jobs={len(scheduler.get_jobs())}")
+    if scheduler:
+        logging.info(f"Background scheduler status: running={scheduler.running}, jobs={len(scheduler.get_jobs())}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
