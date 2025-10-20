@@ -852,6 +852,9 @@ async def seed_initial_data():
         ]
         await db.departments.insert_many(departments)
         logging.info("Initial departments seeded")
+    
+    # Log scheduler status
+    logging.info(f"Background scheduler status: running={scheduler.running}, jobs={len(scheduler.get_jobs())}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
