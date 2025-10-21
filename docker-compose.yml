@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: soporte_ti_db
+
+  backend:
+    build: ./backend
+    container_name: backend
+    restart: always
+    depends_on:
+      - mongodb
+    ports:
+      - "8001:8001"
+    environment:
+      MONGO_URL: "mongodb://mongodb:27017"
+      DB_NAME: "soporte_ti_db"
+      CORS_ORIGINS: "*"
+      JWT_SECRET: "your-secret-key-change-in-production"
+    command: >
+      sh -c "uvicorn server:app --host 0.0.0.0 --port 8001"
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_BACKEND_URL: "http://localhost:8001"
+    command: >
+      sh -c "yarn install && yarn start"
+
+volumes:
+  mongo_data:
