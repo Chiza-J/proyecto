@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
-Script para poblar la base de datos con datos de ejemplo
-Ejecutar: python3 seed_database.py
+Script para poblar la base de datos con datos de ejemplo.
+Se ejecuta automáticamente al iniciar el backend.
 """
 
-import asyncio
-from motor.motor_asyncio import AsyncIOMotorClient
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime, timezone
 import bcrypt
+from motor.motor_asyncio import AsyncIOMotorClient
 
-MONGO_URL = "mongodb://localhost:27017"
-DB_NAME = "soporte_ti_db"
+import os
+
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://mongo:27017")
+DB_NAME = os.getenv("DB_NAME", "soporte_ti_db")
 
 async def seed_database():
     client = AsyncIOMotorClient(MONGO_URL)
     db = client[DB_NAME]
-    
+
     print("🗑️  Limpiando base de datos...")
     await db.users.delete_many({})
     await db.tickets.delete_many({})
@@ -26,7 +27,7 @@ async def seed_database():
     await db.categories.delete_many({})
     await db.departments.delete_many({})
     await db.equipments.delete_many({})
-    
+
     # 1. Departamentos
     print("📁 Creando departamentos...")
     departments = [
@@ -37,7 +38,7 @@ async def seed_database():
     ]
     await db.departments.insert_many(departments)
     dept_it_id = departments[0]["id"]
-    
+
     # 2. Categorías
     print("🏷️  Creando categorías...")
     categories = [
@@ -50,11 +51,11 @@ async def seed_database():
     await db.categories.insert_many(categories)
     cat_hardware_id = categories[0]["id"]
     cat_software_id = categories[1]["id"]
-    
+
     # 3. Usuarios
     print("👥 Creando usuarios...")
     password_hash = bcrypt.hashpw("password123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    
+
     users = [
         {
             "id": str(uuid.uuid4()),
@@ -115,7 +116,7 @@ async def seed_database():
     cliente1_id = users[3]["id"]
     cliente2_id = users[4]["id"]
     tecnico1_id = users[1]["id"]
-    
+
     # 4. Equipos
     print("💻 Creando equipos...")
     equipments = [
@@ -142,7 +143,7 @@ async def seed_database():
     ]
     await db.equipments.insert_many(equipments)
     laptop_id = equipments[0]["id"]
-    
+
     # 5. Tickets
     print("🎫 Creando tickets...")
     tickets = [
@@ -175,114 +176,10 @@ async def seed_database():
             "assigned_at": None,
             "closed_at": None,
             "last_priority_change": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "user_id": cliente1_id,
-            "technician_id": tecnico1_id,
-            "equipment_id": None,
-            "category_id": categories[2]["id"],  # Red
-            "title": "Sin acceso a internet",
-            "description": "No puedo conectarme a la red WiFi de la oficina.",
-            "priority": "baja",
-            "status": "cerrado",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "assigned_at": datetime.now(timezone.utc).isoformat(),
-            "closed_at": datetime.now(timezone.utc).isoformat(),
-            "last_priority_change": datetime.now(timezone.utc).isoformat()
         }
     ]
     await db.tickets.insert_many(tickets)
-    
-    ticket1_id = tickets[0]["id"]
-    ticket3_id = tickets[2]["id"]
-    
-    # 6. Comentarios
-    print("💬 Creando comentarios...")
-    comments = [
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket1_id,
-            "user_id": tecnico1_id,
-            "comment": "He revisado el equipo. Parece ser un problema con la fuente de poder. Voy a reemplazarla.",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket1_id,
-            "user_id": cliente1_id,
-            "comment": "Gracias por la actualización. ¿Cuánto tiempo tomará?",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket3_id,
-            "user_id": tecnico1_id,
-            "comment": "Problema resuelto. El router estaba desconectado.",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-    ]
-    await db.comments.insert_many(comments)
-    
-    # 7. Historial
-    print("📜 Creando historial...")
-    history = [
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket1_id,
-            "user_id": cliente1_id,
-            "action": "Ticket creado con prioridad baja",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket1_id,
-            "user_id": "system",
-            "action": "Prioridad escalada automáticamente de baja a media",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket1_id,
-            "user_id": tecnico1_id,
-            "action": "Asignado a técnico Carlos Técnico | Estado cambiado a en_proceso | Prioridad cambiada de media a alta",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket3_id,
-            "user_id": cliente1_id,
-            "action": "Ticket creado con prioridad baja",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        },
-        {
-            "id": str(uuid.uuid4()),
-            "ticket_id": ticket3_id,
-            "user_id": tecnico1_id,
-            "action": "Estado cambiado a cerrado",
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-    ]
-    await db.ticket_history.insert_many(history)
-    
-    print("\n✅ Base de datos poblada exitosamente!")
-    print("\n📊 Resumen:")
-    print(f"   • {len(departments)} departamentos")
-    print(f"   • {len(categories)} categorías")
-    print(f"   • {len(users)} usuarios (1 admin, 2 técnicos, 2 clientes)")
-    print(f"   • {len(equipments)} equipos")
-    print(f"   • {len(tickets)} tickets")
-    print(f"   • {len(comments)} comentarios")
-    print(f"   • {len(history)} entradas de historial")
-    
-    print("\n🔐 Credenciales de prueba:")
-    print("   Admin:     admin@techassist.com / password123")
-    print("   Técnico 1: tecnico1@techassist.com / password123")
-    print("   Técnico 2: tecnico2@techassist.com / password123")
-    print("   Cliente 1: cliente1@empresa.com / password123")
-    print("   Cliente 2: cliente2@empresa.com / password123")
-    
-    client.close()
 
-if __name__ == "__main__":
-    asyncio.run(seed_database())
+    print("✅ Base de datos poblada exitosamente!")
+
+    client.close()

@@ -1,27 +1,28 @@
 version: "3.9"
 
 services:
-  mongodb:
-    image: mongo:latest
-    container_name: mongodb
-    restart: always
+  mongo:
+    image: mongo:7
+    container_name: techassist_mongo
     ports:
       - "27017:27017"
     volumes:
-      - ./data/mongo:/data/db
+      - mongo_data:/data/db
     environment:
       MONGO_INITDB_DATABASE: soporte_ti_db
+    networks:
+      - techassist_network
 
   backend:
     build: ./backend
     container_name: backend
     restart: always
     depends_on:
-      - mongodb
+      - mongo
     ports:
       - "8001:8001"
     environment:
-      MONGO_URL: "mongodb://mongodb:27017"
+      MONGO_URL: "mongodb://mongo:27017"
       DB_NAME: "soporte_ti_db"
       CORS_ORIGINS: "*"
       JWT_SECRET: "your-secret-key-change-in-production"
@@ -37,9 +38,13 @@ services:
     ports:
       - "3000:3000"
     environment:
-      REACT_APP_BACKEND_URL: "http://localhost:8001"
+      REACT_APP_BACKEND_URL: "http://backend:8001"
     command: >
       sh -c "yarn install && yarn start"
 
 volumes:
   mongo_data:
+
+networks:
+  techassist_network:
+    driver: bridge
